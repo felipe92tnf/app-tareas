@@ -112,4 +112,18 @@ section {
             "aside"
             "main";
     }
+}aside ul {
+    list-style: none;
+    padding: 0;
+}
+
+aside ul li {
+    padding: 8px 0;
+    cursor: pointer;
+    transition: color 0.2s ease, transform 0.2s ease;
+}
+
+aside ul li:hover {
+    color: var(--color-primario);
+    transform: translateX(6px);
 }
