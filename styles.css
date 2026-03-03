@@ -1,0 +1,104 @@
+:root {
+    /* Colores */
+    --color-primario: #4f46e5;
+    --color-secundario: #f3f4f6;
+    --color-fondo: #ffffff;
+    --color-texto: #1f2937;
+    --color-alta: #ef4444;
+    --color-media: #f59e0b;
+    --color-baja: #10b981;
+
+    /* Fuentes */
+    --fuente-principal: 'Arial', sans-serif;
+
+    /* Espaciados */
+    --espacio-pequeno: 8px;
+    --espacio-medio: 16px;
+    --espacio-grande: 24px;
+
+    /* Bordes */
+    --radio-borde: 8px;
+}body {
+    font-family: var(--fuente-principal);
+    background-color: var(--color-secundario);
+    color: var(--color-texto);
+    margin: 0;
+}
+
+header {
+    background-color: var(--color-primario);
+    color: white;
+    padding: var(--espacio-medio);
+}
+
+aside {
+    background-color: var(--color-fondo);
+    padding: var(--espacio-medio);
+}
+
+main {
+    padding: var(--espacio-medio);
+}
+
+section {
+    background-color: var(--color-fondo);
+    margin-bottom: var(--espacio-medio);
+    padding: var(--espacio-medio);
+    border-radius: var(--radio-borde);
+}.tarea {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: var(--espacio-medio);
+    margin-bottom: var(--espacio-pequeno);
+    background-color: var(--color-secundario);
+    border-radius: var(--radio-borde);
+}
+
+.info h3 {
+    margin: 0;
+}
+
+.categoria {
+    font-size: 0.9rem;
+    opacity: 0.7;
+    margin: 0;
+}
+
+.prioridad {
+    padding: 4px 8px;
+    border-radius: var(--radio-borde);
+    color: white;
+    font-size: 0.8rem;
+}
+
+.alta {
+    background-color: var(--color-alta);
+}/* Layout general */
+body {
+    display: grid;
+    grid-template-columns: 250px 1fr;
+    grid-template-areas:
+        "header header"
+        "aside main";
+}
+
+header {
+    grid-area: header;
+}
+
+aside {
+    grid-area: aside;
+}
+
+main {
+    grid-area: main;
+}@media (max-width: 768px) {
+    body {
+        grid-template-columns: 1fr;
+        grid-template-areas:
+            "header"
+            "aside"
+            "main";
+    }
+}
