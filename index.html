@@ -22,23 +22,28 @@
     </aside>
 
     <main>
-        <section>
-            <h2>Tareas Pendientes</h2>
 
-            <article class="tarea">
-    <div class="info">
-        <h3>Preparar práctica</h3>
-        <p class="categoria">Estudio</p>
-    </div>
-    <span class="prioridad alta">Alta</span>
-</article>
+    <section>
+        <h2>Tareas Pendientes</h2>
 
-        </section>
+        <form id="task-form">
+            <input 
+                type="text" 
+                id="task-input" 
+                placeholder="Escribe una nueva tarea..."
+                required
+            >
+            <button type="submit">Añadir</button>
+        </form>
 
-        <section>
-            <h2>Tareas Completadas</h2>
-        </section>
-    </main>
+        <div id="task-list"></div>
+    </section>
 
+    <section>
+        <h2>Tareas Completadas</h2>
+    </section>
+
+</main>
+<script src="app.js"></script>
 </body>
 </html>
