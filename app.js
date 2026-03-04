@@ -1,15 +1,29 @@
-let tareas = [];
-
 const form = document.getElementById("task-form");
 const input = document.getElementById("task-input");
-const taskList = document.getElementById("task-list");
+
+const pendingList = document.getElementById("task-list");
+const completedList = document.getElementById("completed-list");
+
 const searchInput = document.getElementById("task-search");
 
-function guardar() {
-  localStorage.setItem("tareas", JSON.stringify(tareas));
+const STORAGE_KEY = "tareas";
+
+let tareas = [];
+
+// guardar en localStorage
+function saveTasks() {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(tareas));
 }
 
-function crearTarjeta(taskText) {
+// cargar tareas guardadas
+function loadTasks() {
+  const raw = localStorage.getItem(STORAGE_KEY);
+  tareas = raw ? JSON.parse(raw) : [];
+}
+
+// crear tarjeta de tarea
+function createTaskCard(task) {
+
   const taskEl = document.createElement("article");
   taskEl.classList.add("tarea");
 
@@ -17,7 +31,7 @@ function crearTarjeta(taskText) {
   info.classList.add("info");
 
   const title = document.createElement("h3");
-  title.textContent = taskText;
+  title.textContent = task.text;
 
   const category = document.createElement("p");
   category.classList.add("categoria");
@@ -26,49 +40,92 @@ function crearTarjeta(taskText) {
   info.appendChild(title);
   info.appendChild(category);
 
+  const actions = document.createElement("div");
+
+  const completeBtn = document.createElement("button");
+  completeBtn.textContent = task.done ? "Deshacer" : "Completar";
+
+  completeBtn.addEventListener("click", function () {
+
+    task.done = !task.done;
+
+    saveTasks();
+    render();
+
+  });
+
   const deleteBtn = document.createElement("button");
   deleteBtn.textContent = "Eliminar";
 
   deleteBtn.addEventListener("click", function () {
-    taskEl.remove();
-    const index = tareas.indexOf(taskText);
-    if (index > -1) tareas.splice(index, 1);
-    guardar();
+
+    tareas = tareas.filter(t => t.id !== task.id);
+
+    saveTasks();
+    render();
+
   });
+
+  actions.appendChild(completeBtn);
+  actions.appendChild(deleteBtn);
 
   taskEl.appendChild(info);
-  taskEl.appendChild(deleteBtn);
-  taskList.appendChild(taskEl);
+  taskEl.appendChild(actions);
+
+  return taskEl;
 }
 
-// Cargar
-const tareasGuardadas = localStorage.getItem("tareas");
-if (tareasGuardadas) tareas = JSON.parse(tareasGuardadas);
-tareas.forEach(crearTarjeta);
+// renderizar tareas
+function render(filterText = "") {
 
-// Añadir
-form.addEventListener("submit", function (event) {
-  event.preventDefault();
+  pendingList.innerHTML = "";
+  completedList.innerHTML = "";
 
-  const taskText = input.value.trim();
-  if (!taskText) return;
+  const texto = filterText.toLowerCase();
 
-  tareas.push(taskText);
-  guardar();
-  crearTarjeta(taskText);
+  tareas
+    .filter(t => t.text.toLowerCase().includes(texto))
+    .forEach(task => {
+
+      const card = createTaskCard(task);
+
+      if (task.done) {
+        completedList.appendChild(card);
+      } else {
+        pendingList.appendChild(card);
+      }
+
+    });
+}
+
+// añadir tarea
+form.addEventListener("submit", function (e) {
+
+  e.preventDefault();
+
+  const text = input.value.trim();
+  if (!text) return;
+
+  tareas.push({
+    id: crypto.randomUUID(),
+    text: text,
+    done: false
+  });
+
+  saveTasks();
+  render();
 
   input.value = "";
+
 });
 
-// Buscar (bonus)
-if (searchInput) {
-  searchInput.addEventListener("input", function () {
-    const texto = searchInput.value.toLowerCase();
-    const tareasDOM = document.querySelectorAll("#task-list .tarea");
+// buscador
+searchInput.addEventListener("input", function () {
 
-    tareasDOM.forEach(function (tarea) {
-      const titulo = tarea.querySelector("h3").textContent.toLowerCase();
-      tarea.style.display = titulo.includes(texto) ? "flex" : "none";
-    });
-  });
-}
+  render(searchInput.value);
+
+});
+
+// iniciar app
+loadTasks();
+render();

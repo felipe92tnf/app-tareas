@@ -1,54 +1,56 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>App de Tareas</title>
-    <link rel="stylesheet" href="styles.css">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>App de Tareas</title>
+  <link rel="stylesheet" href="styles.css">
 </head>
 <body>
 
-    <header>
-        <h1>Gestor de Tareas</h1>
-    </header>
+  <header>
+    <h1>Gestor de Tareas</h1>
+  </header>
 
-    <aside>
-        <h2>Categorías</h2>
-        <ul>
-            <li>Trabajo</li>
-            <li>Estudio</li>
-            <li>Personal</li>
-        </ul>
-    </aside>
+  <aside>
+    <h2>Categorías</h2>
+    <ul>
+      <li>Trabajo</li>
+      <li>Estudio</li>
+      <li>Personal</li>
+    </ul>
 
-    <main>
-
-    <section>
-        <h2>Tareas Pendientes</h2>
-
-        <form id="task-form">
-            <input 
-                type="text" 
-                id="task-input" 
-                placeholder="Escribe una nueva tarea..."
-                required
-            >
-            <button type="submit">Añadir</button>
-        </form>
-    <!-- buscador -->
-    <input 
-        type="text"
-        id="task-search"
-        placeholder="Buscar tareas..."
+    <!-- Buscador dentro del aside -->
+    <input
+      type="text"
+      id="task-search"
+      placeholder="Buscar tareas..."
     >
-        <div id="task-list"></div>
+  </aside>
+
+  <main>
+    <section>
+      <h2>Tareas Pendientes</h2>
+
+      <form id="task-form">
+        <input
+          type="text"
+          id="task-input"
+          placeholder="Escribe una nueva tarea..."
+          required
+        >
+        <button type="submit">Añadir</button>
+      </form>
+
+      <div id="task-list"></div>
     </section>
 
     <section>
-        <h2>Tareas Completadas</h2>
+      <h2>Tareas Completadas</h2>
+      <div id="completed-list"></div>
     </section>
+  </main>
 
-</main>
-<script src="app.js"></script>
+  <script src="app.js"></script>
 </body>
 </html>
