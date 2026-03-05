@@ -1,0 +1,28 @@
+{
+  "name": "app-tareas",
+  "version": "1.0.0",
+  "description": "",
+  "main": "app.js",
+  "scripts": {
+  "build:css": "node ./node_modules/@tailwindcss/cli/dist/index.mjs -i ./input.css -o ./output.css",
+  "watch:css": "node ./node_modules/@tailwindcss/cli/dist/index.mjs -i ./input.css -o ./output.css --watch"
+},
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/felipe92tnf/app-tareas.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/felipe92tnf/app-tareas/issues"
+  },
+  "homepage": "https://github.com/felipe92tnf/app-tareas#readme",
+  "devDependencies": {
+    "@tailwindcss/cli": "^4.2.1",
+    "autoprefixer": "^10.4.27",
+    "postcss": "^8.5.8",
+    "tailwindcss": "^4.2.1"
+  }
+}

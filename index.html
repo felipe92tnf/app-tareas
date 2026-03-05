@@ -3,54 +3,114 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>App de Tareas</title>
-  <link rel="stylesheet" href="styles.css">
+  <title>TaskFlow</title>
+  <link rel="stylesheet" href="output.css">
 </head>
-<body>
 
-  <header>
-    <h1>Gestor de Tareas</h1>
-  </header>
+<body class="bg-gray-100 text-gray-900 dark:bg-gray-900 dark:text-gray-100 min-h-screen">
+  
+  
 
-  <aside>
-    <h2>Categorías</h2>
-    <ul>
-      <li>Trabajo</li>
-      <li>Estudio</li>
-      <li>Personal</li>
-    </ul>
+<!-- HEADER -->
+<header class="bg-blue-600 dark:bg-blue-800 text-white p-6 flex justify-between items-center">
+  <h1 class="text-2xl font-bold">TaskFlow</h1>
 
-    <!-- Buscador dentro del aside -->
+  <button
+    id="theme-toggle"
+    class="bg-white text-blue-600 px-4 py-2 rounded-lg font-semibold hover:bg-gray-200 transition"
+  >
+    🌙 Modo oscuro
+  </button>
+</header>
+
+<div class="grid grid-cols-4 gap-6 p-6">
+
+<!-- SIDEBAR -->
+<aside class="col-span-1 bg-white dark:bg-gray-800 p-4 rounded-xl shadow">
+
+  <h2 class="text-lg font-semibold mb-4">Categorías</h2>
+
+  <ul class="space-y-2 mb-6">
+    <li class="hover:text-blue-500 cursor-pointer">Trabajo</li>
+    <li class="hover:text-blue-500 cursor-pointer">Estudio</li>
+    <li class="hover:text-blue-500 cursor-pointer">Personal</li>
+  </ul>
+
+  <input
+    type="text"
+    id="task-search"
+    placeholder="Buscar tareas..."
+    class="w-full p-2 rounded border dark:bg-gray-700"
+  >
+
+</aside>
+
+<!-- MAIN -->
+<main class="col-span-3 space-y-6">
+
+<!-- TAREAS PENDIENTES -->
+<section class="bg-white dark:bg-gray-800 p-6 rounded-xl shadow">
+
+  <h2 class="text-xl font-semibold mb-4">
+  Tareas Pendientes (<span id="task-count">0</span>)
+</h2>
+
+  <form id="task-form" class="flex gap-2 mb-4">
+
     <input
       type="text"
-      id="task-search"
-      placeholder="Buscar tareas..."
+      id="task-input"
+      placeholder="Escribe una nueva tarea..."
+      required
+      class="flex-1 p-2 rounded border dark:bg-gray-700"
     >
-  </aside>
 
-  <main>
-    <section>
-      <h2>Tareas Pendientes</h2>
+    <button
+      type="submit"
+      class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition"
+    >
+      Añadir
+    </button>
 
-      <form id="task-form">
-        <input
-          type="text"
-          id="task-input"
-          placeholder="Escribe una nueva tarea..."
-          required
-        >
-        <button type="submit">Añadir</button>
-      </form>
+  </form>
 
-      <div id="task-list"></div>
-    </section>
+  <div id="task-list" class="space-y-3"></div>
 
-    <section>
-      <h2>Tareas Completadas</h2>
-      <div id="completed-list"></div>
-    </section>
-  </main>
+</section>
 
-  <script src="app.js"></script>
+<!-- TAREAS COMPLETADAS -->
+<section class="bg-white dark:bg-gray-800 p-6 rounded-xl shadow">
+
+  <h2 class="text-xl font-semibold mb-4">Tareas Completadas</h2>
+
+  <div id="completed-list" class="space-y-3"></div>
+
+</section>
+
+</main>
+</div>
+
+<script src="app.js"></script>
+
+<script>
+  const button = document.getElementById("theme-toggle");
+  const THEME_KEY = "taskflow_theme";
+
+  function setTheme(isDark) {
+    document.documentElement.classList.toggle("dark", isDark);
+    button.textContent = isDark ? "☀️ Modo claro" : "🌙 Modo oscuro";
+    localStorage.setItem(THEME_KEY, isDark ? "dark" : "light");
+  }
+
+  // Al cargar: aplica tema guardado (si no hay, usa claro)
+  const saved = localStorage.getItem(THEME_KEY);
+  setTheme(saved === "dark");
+
+  button.addEventListener("click", () => {
+    const isDarkNow = document.documentElement.classList.contains("dark");
+    setTheme(!isDarkNow);
+  });
+</script>
+
 </body>
 </html>
