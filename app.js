@@ -87,8 +87,12 @@ function createTaskCard(task) {
 
   const deleteBtn = document.createElement("button");
   deleteBtn.type = "button";
-  deleteBtn.className =
-    "px-3 py-2 rounded-lg text-sm font-semibold bg-red-600 text-white hover:bg-red-700 active:scale-[0.98] transition focus:outline-none focus:ring-2 focus:ring-red-400";
+  deleteBtn.className = [
+    "px-3 py-2 rounded-lg text-sm font-semibold",
+    "bg-red-600 text-white hover:bg-red-700",
+    "active:scale-[0.98] transition",
+    "focus:outline-none focus:ring-2 focus:ring-red-400",
+  ].join(" ");
   deleteBtn.textContent = "✕";
 
   deleteBtn.addEventListener("click", () => {
@@ -118,16 +122,24 @@ function render(filterText = "") {
 
   const texto = (filterText || "").toLowerCase();
 
-  tareas
-    .filter((t) => (t.text || "").toLowerCase().includes(texto))
-    .forEach((task) => {
-      const card = createTaskCard(task);
-      if (task.done) completedList.appendChild(card);
-      else pendingList.appendChild(card);
+  const filteredTasks = tareas.filter((t) =>
+    (t.text || "").toLowerCase().includes(texto)
+  );
 
-      const count = tareas.filter(t => !t.done).length;
-document.getElementById("task-count").textContent = count;
-    });
+  const pendingCount = tareas.filter((t) => !t.done).length;
+  const counterEl = document.getElementById("task-count");
+  if (counterEl) {
+    counterEl.textContent = pendingCount;
+  }
+
+  filteredTasks.forEach((task) => {
+    const card = createTaskCard(task);
+    if (task.done) {
+      completedList.appendChild(card);
+    } else {
+      pendingList.appendChild(card);
+    }
+  });
 }
 
 // ---------- Eventos ----------
