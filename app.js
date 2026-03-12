@@ -11,8 +11,8 @@ const STORAGE_KEY = "tareas";
 let tareas = [];
 
 // ---------- LocalStorage ----------
-function saveTasks() {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(tareas));
+function saveTasks(tasks = tareas) {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(tasks));
 }
 
 // Carga y normaliza (convierte strings antiguos a objetos)
@@ -20,30 +20,31 @@ function loadTasks() {
   const raw = localStorage.getItem(STORAGE_KEY);
   const data = raw ? JSON.parse(raw) : [];
 
-  tareas = Array.isArray(data)
-    ? data
-        .map((item) => {
-          if (typeof item === "string") {
-            return {
-              id: crypto.randomUUID
-                ? crypto.randomUUID()
-                : String(Date.now()) + Math.random(),
-              text: item,
-              done: false,
-            };
-          }
+  const createId = () =>
+    crypto.randomUUID
+      ? crypto.randomUUID()
+      : String(Date.now()) + Math.random();
 
-          return {
-            id:
-              item.id ??
-              (crypto.randomUUID
-                ? crypto.randomUUID()
-                : String(Date.now()) + Math.random()),
-            text: item.text ?? "",
-            done: Boolean(item.done),
-          };
-        })
-        .filter((t) => t.text.trim() !== "")
+  const normalizeTask = (item) => {
+    if (typeof item === "string") {
+      return {
+        id: createId(),
+        text: item,
+        done: false,
+      };
+    }
+
+    const text = (item.text ?? "").trim();
+
+    return {
+      id: item.id ?? createId(),
+      text,
+      done: Boolean(item.done),
+    };
+  };
+
+  tareas = Array.isArray(data)
+    ? data.map(normalizeTask).filter((t) => t.text !== "")
     : [];
 
   // Guardar ya normalizado para no volver a fallar
@@ -73,33 +74,47 @@ function createTaskCard(task) {
   const actions = document.createElement("div");
   actions.className = "flex items-center gap-2 shrink-0";
 
-  const completeBtn = document.createElement("button");
-  completeBtn.type = "button";
-  completeBtn.className =
-    "px-3 py-2 rounded-lg text-sm font-semibold bg-blue-600 text-white hover:bg-blue-700 active:scale-[0.98] transition focus:outline-none focus:ring-2 focus:ring-blue-400";
-  completeBtn.textContent = task.done ? "Deshacer" : "Completar";
+  const createButton = (text, classNames, onClick) => {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.textContent = text;
+    button.className = classNames.join(" ");
+    button.addEventListener("click", onClick);
+    return button;
+  };
 
-  completeBtn.addEventListener("click", () => {
-    task.done = !task.done;
+  const refresh = () => {
     saveTasks();
     render(searchInput ? searchInput.value : "");
-  });
+  };
 
-  const deleteBtn = document.createElement("button");
-  deleteBtn.type = "button";
-  deleteBtn.className = [
-    "px-3 py-2 rounded-lg text-sm font-semibold",
-    "bg-red-600 text-white hover:bg-red-700",
-    "active:scale-[0.98] transition",
-    "focus:outline-none focus:ring-2 focus:ring-red-400",
-  ].join(" ");
-  deleteBtn.textContent = "✕";
+  const completeBtn = createButton(
+    task.done ? "Deshacer" : "Completar",
+    [
+      "px-3 py-2 rounded-lg text-sm font-semibold",
+      "bg-blue-600 text-white hover:bg-blue-700",
+      "active:scale-[0.98] transition",
+      "focus:outline-none focus:ring-2 focus:ring-blue-400",
+    ],
+    () => {
+      task.done = !task.done;
+      refresh();
+    }
+  );
 
-  deleteBtn.addEventListener("click", () => {
-    tareas = tareas.filter((t) => t.id !== task.id);
-    saveTasks();
-    render(searchInput ? searchInput.value : "");
-  });
+  const deleteBtn = createButton(
+    "✕",
+    [
+      "px-3 py-2 rounded-lg text-sm font-semibold",
+      "bg-red-600 text-white hover:bg-red-700",
+      "active:scale-[0.98] transition",
+      "focus:outline-none focus:ring-2 focus:ring-red-400",
+    ],
+    () => {
+      tareas = tareas.filter((t) => t.id !== task.id);
+      refresh();
+    }
+  );
 
   actions.appendChild(completeBtn);
   actions.appendChild(deleteBtn);
@@ -120,25 +135,22 @@ function render(filterText = "") {
   pendingList.innerHTML = "";
   completedList.innerHTML = "";
 
-  const texto = (filterText || "").toLowerCase();
+  const query = (filterText || "").toLowerCase();
 
-  const filteredTasks = tareas.filter((t) =>
-    (t.text || "").toLowerCase().includes(texto)
+  const filteredTasks = tareas.filter((task) =>
+    (task.text || "").toLowerCase().includes(query)
   );
 
-  const pendingCount = tareas.filter((t) => !t.done).length;
+  const pendingTasks = tareas.filter((task) => !task.done);
   const counterEl = document.getElementById("task-count");
   if (counterEl) {
-    counterEl.textContent = pendingCount;
+    counterEl.textContent = pendingTasks.length;
   }
 
   filteredTasks.forEach((task) => {
     const card = createTaskCard(task);
-    if (task.done) {
-      completedList.appendChild(card);
-    } else {
-      pendingList.appendChild(card);
-    }
+    const list = task.done ? completedList : pendingList;
+    list.appendChild(card);
   });
 }
 
