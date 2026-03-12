@@ -1,57 +1,89 @@
-const form = document.getElementById("task-form");
-const input = document.getElementById("task-input");
+const taskFormElement = document.getElementById("task-form");
+const taskInputElement = document.getElementById("task-input");
 
-const pendingList = document.getElementById("task-list");
-const completedList = document.getElementById("completed-list");
+const pendingTasksContainer = document.getElementById("task-list");
+const completedTasksContainer = document.getElementById("completed-list");
 
-const searchInput = document.getElementById("task-search");
+const searchInputElement = document.getElementById("task-search");
 
-const STORAGE_KEY = "tareas";
+const TASKS_STORAGE_KEY = "tareas";
 
-let tareas = [];
+let tasks = [];
 
 // ---------- LocalStorage ----------
-function saveTasks(tasks = tareas) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(tasks));
+
+/**
+ * Persiste el estado actual de las tareas en localStorage.
+ *
+ * @param {{ id: string; text: string; done: boolean }[]} [tasksToSave=tasks]
+ *   Lista de tareas a guardar. Por defecto usa el array global `tasks`.
+ */
+function saveTasksToStorage(tasksToSave = tasks) {
+  localStorage.setItem(TASKS_STORAGE_KEY, JSON.stringify(tasksToSave));
 }
 
-// Carga y normaliza (convierte strings antiguos a objetos)
-function loadTasks() {
-  const raw = localStorage.getItem(STORAGE_KEY);
+/**
+ * Carga las tareas desde localStorage y las normaliza al formato actual.
+ *
+ * - Convierte strings antiguos en objetos tarea.
+ * - Asegura que cada tarea tenga `id`, `text` y `done`.
+ * - Elimina tareas sin texto.
+ */
+function loadTasksFromStorage() {
+  const raw = localStorage.getItem(TASKS_STORAGE_KEY);
   const data = raw ? JSON.parse(raw) : [];
 
+  /**
+   * Genera un identificador único para una tarea.
+   *
+   * @returns {string} Id único.
+   */
   const createId = () =>
     crypto.randomUUID
       ? crypto.randomUUID()
       : String(Date.now()) + Math.random();
 
-  const normalizeTask = (item) => {
-    if (typeof item === "string") {
+  /**
+   * Normaliza un item procedente de localStorage al formato de tarea actual.
+   *
+   * @param {string | { id?: string; text?: string; done?: boolean }} rawItem
+   * @returns {{ id: string; text: string; done: boolean }}
+   */
+  const normalizeTask = (rawItem) => {
+    if (typeof rawItem === "string") {
       return {
         id: createId(),
-        text: item,
+        text: rawItem,
         done: false,
       };
     }
 
-    const text = (item.text ?? "").trim();
+    const text = (rawItem.text ?? "").trim();
 
     return {
-      id: item.id ?? createId(),
+      id: rawItem.id ?? createId(),
       text,
-      done: Boolean(item.done),
+      done: Boolean(rawItem.done),
     };
   };
 
-  tareas = Array.isArray(data)
+  tasks = Array.isArray(data)
     ? data.map(normalizeTask).filter((t) => t.text !== "")
     : [];
 
   // Guardar ya normalizado para no volver a fallar
-  saveTasks();
+  saveTasksToStorage();
 }
 
 // ---------- UI ----------
+
+/**
+ * Crea el nodo DOM que representa visualmente una tarea.
+ *
+ * @param {{ id: string; text: string; done: boolean }} task
+ *   Tarea a representar.
+ * @returns {HTMLElement} Artículo con la tarjeta de tarea.
+ */
 function createTaskCard(task) {
   const taskEl = document.createElement("article");
   taskEl.className =
@@ -71,8 +103,8 @@ function createTaskCard(task) {
   info.appendChild(title);
   info.appendChild(category);
 
-  const actions = document.createElement("div");
-  actions.className = "flex items-center gap-2 shrink-0";
+  const actionsContainer = document.createElement("div");
+  actionsContainer.className = "flex items-center gap-2 shrink-0";
 
   const createButton = (text, classNames, onClick) => {
     const button = document.createElement("button");
@@ -83,9 +115,9 @@ function createTaskCard(task) {
     return button;
   };
 
-  const refresh = () => {
-    saveTasks();
-    render(searchInput ? searchInput.value : "");
+  const refreshListView = () => {
+    saveTasksToStorage();
+    renderTaskLists(searchInputElement ? searchInputElement.value : "");
   };
 
   const completeBtn = createButton(
@@ -98,7 +130,7 @@ function createTaskCard(task) {
     ],
     () => {
       task.done = !task.done;
-      refresh();
+      refreshListView();
     }
   );
 
@@ -111,16 +143,16 @@ function createTaskCard(task) {
       "focus:outline-none focus:ring-2 focus:ring-red-400",
     ],
     () => {
-      tareas = tareas.filter((t) => t.id !== task.id);
-      refresh();
+      tasks = tasks.filter((t) => t.id !== task.id);
+      refreshListView();
     }
   );
 
-  actions.appendChild(completeBtn);
-  actions.appendChild(deleteBtn);
+  actionsContainer.appendChild(completeBtn);
+  actionsContainer.appendChild(deleteBtn);
 
   taskEl.appendChild(info);
-  taskEl.appendChild(actions);
+  taskEl.appendChild(actionsContainer);
 
   // extra visual para completadas
   if (task.done) {
@@ -131,17 +163,23 @@ function createTaskCard(task) {
   return taskEl;
 }
 
-function render(filterText = "") {
-  pendingList.innerHTML = "";
-  completedList.innerHTML = "";
+/**
+ * Renderiza las listas de tareas pendientes y completadas en la interfaz.
+ *
+ * @param {string} [filterText=""]
+ *   Texto de búsqueda para filtrar tareas por su descripción.
+ */
+function renderTaskLists(filterText = "") {
+  pendingTasksContainer.innerHTML = "";
+  completedTasksContainer.innerHTML = "";
 
   const query = (filterText || "").toLowerCase();
 
-  const filteredTasks = tareas.filter((task) =>
+  const filteredTasks = tasks.filter((task) =>
     (task.text || "").toLowerCase().includes(query)
   );
 
-  const pendingTasks = tareas.filter((task) => !task.done);
+  const pendingTasks = tasks.filter((task) => !task.done);
   const counterEl = document.getElementById("task-count");
   if (counterEl) {
     counterEl.textContent = pendingTasks.length;
@@ -149,37 +187,37 @@ function render(filterText = "") {
 
   filteredTasks.forEach((task) => {
     const card = createTaskCard(task);
-    const list = task.done ? completedList : pendingList;
+    const list = task.done ? completedTasksContainer : pendingTasksContainer;
     list.appendChild(card);
   });
 }
 
 // ---------- Eventos ----------
-form.addEventListener("submit", (e) => {
-  e.preventDefault();
+taskFormElement.addEventListener("submit", (event) => {
+  event.preventDefault();
 
-  const text = input.value.trim();
-  if (!text) return;
+  const newTaskText = taskInputElement.value.trim();
+  if (!newTaskText) return;
 
-  tareas.push({
+  tasks.push({
     id: crypto.randomUUID ? crypto.randomUUID() : String(Date.now()) + Math.random(),
-    text,
+    text: newTaskText,
     done: false,
   });
 
-  saveTasks();
-  render(searchInput ? searchInput.value : "");
+  saveTasksToStorage();
+  renderTaskLists(searchInputElement ? searchInputElement.value : "");
 
-  input.value = "";
-  input.focus();
+  taskInputElement.value = "";
+  taskInputElement.focus();
 });
 
-if (searchInput) {
-  searchInput.addEventListener("input", () => {
-    render(searchInput.value);
+if (searchInputElement) {
+  searchInputElement.addEventListener("input", () => {
+    renderTaskLists(searchInputElement.value);
   });
 }
 
 // ---------- Init ----------
-loadTasks();
-render();
+loadTasksFromStorage();
+renderTaskLists();
