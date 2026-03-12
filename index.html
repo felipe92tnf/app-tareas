@@ -105,31 +105,7 @@
 </div>
 
 <script src="app.js"></script>
-
-<script>
-  const button = document.getElementById("theme-toggle");
-  const THEME_KEY = "taskflow_theme";
-
-  function setTheme(isDark) {
-    document.documentElement.classList.toggle("dark", isDark);
-    button.textContent = isDark ? "☀️ Modo claro" : "🌙 Modo oscuro";
-    button.setAttribute("aria-pressed", String(isDark));
-    button.setAttribute(
-      "aria-label",
-      isDark ? "Cambiar a modo claro" : "Cambiar a modo oscuro"
-    );
-    localStorage.setItem(THEME_KEY, isDark ? "dark" : "light");
-  }
-
-  // Al cargar: aplica tema guardado (si no hay, usa claro)
-  const saved = localStorage.getItem(THEME_KEY);
-  setTheme(saved === "dark");
-
-  button.addEventListener("click", () => {
-    const isDarkNow = document.documentElement.classList.contains("dark");
-    setTheme(!isDarkNow);
-  });
-</script>
+<script src="theme.js"></script>
 
 </body>
 </html>
