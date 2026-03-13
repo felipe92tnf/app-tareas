@@ -251,3 +251,201 @@ Generar documentación automáticamente.
 Explicar partes complejas del código.
 
 Ayudar en tareas de refactorización.
+
+# Experimentos con IA en programación
+
+## Objetivo
+
+En este documento se documentan varios experimentos para analizar cómo influye el uso de inteligencia artificial en el desarrollo de software.
+
+# Experimento 1 — Contar tareas completadas
+
+## Problema
+Crear una función que reciba un array de tareas y devuelva cuántas están completadas.
+
+ Solución sin IA
+
+Tiempo aproximado: 5 minutos
+
+function countCompleted(tasks) {
+  let count = 0;
+
+  for (let task of tasks) {
+    if (task.done) {
+      count++;
+    }
+  }
+
+  return count;
+}
+ Solución con IA
+
+Tiempo aproximado: 10 segundos
+
+function countCompletedTasks(tasks) {
+  return tasks.filter(task => task.done === true).length;
+
+  
+}
+
+Comparación
+
+La solución con IA fue más rápida y más concisa.
+
+Experimento 2 — Filtrar tareas por texto
+
+## Problema
+
+Crear una función que devuelva las tareas que contienen un texto específico.
+
+Solución sin IA
+
+Tiempo aproximado: 6 minutos
+
+function searchTasks(tasks, query) {
+  const results = [];
+
+  for (let task of tasks) {
+    if (task.text.toLowerCase().includes(query.toLowerCase())) {
+      results.push(task);
+    }
+  }
+
+  return results;
+}
+
+Solución con IA
+
+Tiempo aproximado: 10 segundos
+
+function findTasksByText(tasks, searchText) {
+  const query = (searchText || "").toLowerCase();
+  return tasks.filter(task => (task.text || "").toLowerCase().includes(query));
+}
+Comparación
+
+La solución con IA fue más rápida y más concisa.
+La solución manual ayudó a comprender mejor el proceso de iteración.
+
+Experimento 3 — Generar ID para tareas
+
+##Problema
+
+Crear una función que genere un identificador único para una tarea.
+
+Solución sin IA
+
+Tiempo aproximado: 4 minutos
+
+function generateId() {
+  return Date.now() + Math.random();
+}
+Solución con IA
+
+Tiempo aproximado: 10 segundos
+
+function generateTaskId() {
+  return typeof crypto !== "undefined" && typeof crypto.randomUUID === "function"
+    ? crypto.randomUUID()
+    : String(Date.now()) + Math.random();
+}
+Comparación
+
+La IA proporcionó una solución más robusta al considerar crypto.randomUUID().
+
+Experimento 4 — Validación del input (relacionado con TaskFlow)
+
+##Problema
+
+Evitar que el usuario añada tareas vacías.
+
+Solución sin IA
+
+Tiempo aproximado: 3 minutos
+
+if (taskInput.value.trim() === "") {
+  return;
+}
+Solución con IA
+
+Tiempo aproximado: 05 segundos
+
+function validateTask(text) {
+  return text.trim().length > 0;
+}
+Comparación
+
+La solución con IA separa la validación en una función reutilizable.
+
+Experimento 5 — Contador de tareas pendientes
+
+##Problema(relacionado con Taskflow)
+
+Mostrar cuántas tareas pendientes hay en la interfaz.
+
+Solución sin IA
+
+Tiempo aproximado: 5 minutos
+
+const pendingTasks = tasks.filter(task => !task.done);
+taskCountElement.textContent = pendingTasks.length;
+Solución con IA
+
+Tiempo aproximado: 10 segundos
+
+taskCountElement.textContent = tasks.filter(t => !t.done).length;
+Comparación
+
+Ambas soluciones son similares, pero la IA generó el código más rápidamente.
+
+Experimento 6 — Mejora de la función render
+
+##Problema
+
+Optimizar la función encargada de mostrar las tareas en la interfaz de la aplicación TaskFlow.
+
+Solución sin IA
+
+Tiempo aproximado: 6 minutos
+
+tasks.forEach(task => {
+  const card = createTaskCard(task);
+
+  if (task.done) {
+    completedTasksContainer.appendChild(card);
+  } else {
+    pendingTasksContainer.appendChild(card);
+  }
+});
+
+Solución con IA
+
+Tiempo aproximado: 10 segundos
+
+
+tasks.forEach(task => {
+  const card = createTaskCard(task);
+
+  const targetList = task.done
+    ? completedTasksContainer
+    : pendingTasksContainer;
+
+  targetList.appendChild(card);
+});
+Comparación
+
+La solución con IA es más clara y reduce la duplicación de código
+
+##Conclusiones generales##
+
+Los experimentos muestran que la inteligencia artificial puede acelerar significativamente ciertas tareas de programación.
+
+Ventajas observadas:
+
+generación rápida de código
+
+sugerencias de mejora
+
+explicación de funciones
+
+Sin embargo, resolver problemas primero sin IA ayuda a comprender mejor la lógica del código.
