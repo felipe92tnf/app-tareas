@@ -172,32 +172,21 @@ function createTaskCard(task) {
   title.textContent = task.text;
 
   const priorityBadge = document.createElement("span");
-  priorityBadge.className =
-    "inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold border shadow-sm";
+priorityBadge.className =
+  "inline-flex items-center px-3 py-1 rounded-full text-xs font-bold border mt-1";
 
-  const priority = task.priority || "medium";
-  if (priority === "high") {
-    priorityBadge.textContent = "Alta";
-    priorityBadge.classList.add(
-      "bg-red-50",
-      "text-red-700",
-      "border-red-200"
-    );
-  } else if (priority === "low") {
-    priorityBadge.textContent = "Baja";
-    priorityBadge.classList.add(
-      "bg-emerald-50",
-      "text-emerald-700",
-      "border-emerald-200"
-    );
-  } else {
-    priorityBadge.textContent = "Media";
-    priorityBadge.classList.add(
-      "bg-yellow-50",
-      "text-yellow-700",
-      "border-yellow-200"
-    );
-  }
+const priority = task.priority || "medium";
+
+if (priority === "high") {
+  priorityBadge.textContent = "Alta";
+  priorityBadge.classList.add("bg-red-500", "text-white", "border-red-700");
+} else if (priority === "low") {
+  priorityBadge.textContent = "Baja";
+  priorityBadge.classList.add("bg-green-500", "text-white", "border-green-700");
+} else {
+  priorityBadge.textContent = "Media";
+  priorityBadge.classList.add("bg-yellow-400", "text-black", "border-yellow-600");
+}
 
   taskInfoContainer.appendChild(title);
   taskInfoContainer.appendChild(priorityBadge);
