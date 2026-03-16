@@ -4,6 +4,7 @@
  * @property {string} text
  * @property {boolean} done
  * @property {"low" | "medium" | "high"} priority
+ * @property {string | null} dueDate
  */
 
 // ---------- Selectores de DOM ----------
@@ -11,6 +12,7 @@
 const taskFormElement = document.getElementById("task-form");
 const taskInputElement = document.getElementById("task-input");
 const taskPriorityElement = document.getElementById("task-priority");
+const taskDueDateElement = document.getElementById("task-due-date");
 
 const pendingTasksContainer = document.getElementById("task-list");
 const completedTasksContainer = document.getElementById("completed-list");
@@ -54,7 +56,7 @@ function safeJsonParse(raw) {
 
 /**
  * Normaliza un item procedente de localStorage al formato de tarea actual.
- * @param {string | { id?: string; text?: string; done?: boolean; priority?: string }} rawItem
+ * @param {string | { id?: string; text?: string; done?: boolean; priority?: string; dueDate?: string | null }} rawItem
  * @returns {Task}
  */
 function normalizeTask(rawItem) {
@@ -64,6 +66,7 @@ function normalizeTask(rawItem) {
       text: rawItem,
       done: false,
       priority: "medium",
+      dueDate: null,
     };
   }
 
@@ -73,13 +76,57 @@ function normalizeTask(rawItem) {
     priorityRaw === "high" || priorityRaw === "low" || priorityRaw === "medium"
       ? priorityRaw
       : "medium";
+  const dueDateRaw =
+    typeof rawItem?.dueDate === "string" && rawItem.dueDate.trim()
+      ? rawItem.dueDate
+      : null;
 
   return {
     id: rawItem?.id || generateTaskId(),
     text,
     done: Boolean(rawItem?.done),
     priority: normalizedPriority,
+    dueDate: dueDateRaw,
   };
+}
+
+function toLocalMidnight(date) {
+  return new Date(date.getFullYear(), date.getMonth(), date.getDate());
+}
+
+function parseDueDate(dueDateString) {
+  if (!dueDateString) return null;
+  const [y, m, d] = dueDateString.split("-").map(Number);
+  if (!y || !m || !d) return null;
+  return new Date(y, m - 1, d);
+}
+
+function getDueLabel(dueDateString) {
+  const dueDate = parseDueDate(dueDateString);
+  if (!dueDate) return null;
+
+  const today = toLocalMidnight(new Date());
+  const due = toLocalMidnight(dueDate);
+  const diffDays = Math.round((due - today) / 86400000);
+
+  if (diffDays === 0) return "Vence hoy";
+  if (diffDays === 1) return "Vence mañana";
+
+  const formatted = new Intl.DateTimeFormat("es-ES", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+  }).format(due);
+
+  return `Vence: ${formatted}`;
+}
+
+function isTaskOverdue(task) {
+  if (task.done) return false;
+  const due = parseDueDate(task.dueDate);
+  if (!due) return false;
+  const today = toLocalMidnight(new Date());
+  return toLocalMidnight(due) < today;
 }
 
 /**
@@ -164,6 +211,10 @@ function createTaskCard(task) {
   taskEl.className =
     "flex items-center justify-between gap-4 p-4 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-700/40 shadow-sm";
 
+  if (isTaskOverdue(task)) {
+    taskEl.classList.add("border-red-300", "bg-red-50");
+  }
+
   const taskInfoContainer = document.createElement("div");
   taskInfoContainer.className = "min-w-0";
 
@@ -171,9 +222,12 @@ function createTaskCard(task) {
   title.className = "font-semibold text-gray-900 dark:text-gray-100 truncate";
   title.textContent = task.text;
 
+  const metaRow = document.createElement("div");
+  metaRow.className = "flex flex-wrap items-center gap-2 mt-1";
+
   const priorityBadge = document.createElement("span");
-priorityBadge.className =
-  "inline-flex items-center px-3 py-1 rounded-full text-xs font-bold border mt-1";
+  priorityBadge.className =
+    "inline-flex items-center px-3 py-1 rounded-full text-xs font-bold border";
 
 const priority = task.priority || "medium";
 
@@ -188,8 +242,31 @@ if (priority === "high") {
   priorityBadge.classList.add("bg-yellow-400", "text-black", "border-yellow-600");
 }
 
+  const dueLabel = getDueLabel(task.dueDate);
+  const dueBadge = document.createElement("span");
+  dueBadge.className =
+    "inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold border";
+
+  if (dueLabel) {
+    dueBadge.textContent = dueLabel;
+    if (isTaskOverdue(task)) {
+      dueBadge.classList.add("bg-red-500", "text-white", "border-red-700");
+    } else if (dueLabel === "Vence hoy") {
+      dueBadge.classList.add("bg-yellow-400", "text-black", "border-yellow-600");
+    } else if (dueLabel === "Vence mañana") {
+      dueBadge.classList.add("bg-green-500", "text-white", "border-green-700");
+    } else {
+      dueBadge.classList.add("bg-gray-100", "text-gray-800", "border-gray-300");
+    }
+  } else {
+    dueBadge.classList.add("hidden");
+  }
+
+  metaRow.appendChild(priorityBadge);
+  metaRow.appendChild(dueBadge);
+
   taskInfoContainer.appendChild(title);
-  taskInfoContainer.appendChild(priorityBadge);
+  taskInfoContainer.appendChild(metaRow);
 
   const actionsContainer = document.createElement("div");
   actionsContainer.className = "flex items-center gap-2 shrink-0";
@@ -344,6 +421,10 @@ taskFormElement.addEventListener("submit", (event) => {
   const priorityValue = taskPriorityElement && taskPriorityElement.value
     ? taskPriorityElement.value
     : "medium";
+  const dueDateValue =
+    taskDueDateElement && taskDueDateElement.value
+      ? taskDueDateElement.value
+      : null;
 
   tasks.push({
     id: generateTaskId(),
@@ -352,11 +433,13 @@ taskFormElement.addEventListener("submit", (event) => {
     priority: priorityValue === "high" || priorityValue === "low" || priorityValue === "medium"
       ? priorityValue
       : "medium",
+    dueDate: dueDateValue,
   });
 
   refreshListView();
 
   taskInputElement.value = "";
+  if (taskDueDateElement) taskDueDateElement.value = "";
   taskInputElement.focus();
 });
 
