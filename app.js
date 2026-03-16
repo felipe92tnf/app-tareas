@@ -13,6 +13,9 @@ const taskFormElement = document.getElementById("task-form");
 const taskInputElement = document.getElementById("task-input");
 const taskPriorityElement = document.getElementById("task-priority");
 const taskDueDateElement = document.getElementById("task-due-date");
+const bulkCompleteAllButton = document.getElementById("bulk-complete-all");
+const bulkDeleteCompletedButton = document.getElementById("bulk-delete-completed");
+const bulkClearAllButton = document.getElementById("bulk-clear-all");
 
 const pendingTasksContainer = document.getElementById("task-list");
 const completedTasksContainer = document.getElementById("completed-list");
@@ -139,6 +142,29 @@ function isTaskOverdue(task) {
  */
 function getCompletedTasks(tasksList) {
   return tasksList.filter(task => task.done === true);
+}
+
+function completeAllTasks() {
+  if (tasks.length === 0) return;
+  tasks = tasks.map(task => ({ ...task, done: true }));
+  refreshListView();
+}
+
+function deleteCompletedTasks() {
+  const completedCount = getCompletedTasks(tasks).length;
+  if (completedCount === 0) return;
+  const ok = confirm(`¿Borrar ${completedCount} tarea(s) completada(s)?`);
+  if (!ok) return;
+  tasks = tasks.filter(task => task.done !== true);
+  refreshListView();
+}
+
+function clearAllTasks() {
+  if (tasks.length === 0) return;
+  const ok = confirm("¿Vaciar todas las tareas? Esta acción no se puede deshacer.");
+  if (!ok) return;
+  tasks = [];
+  refreshListView();
 }
 
 /**
@@ -446,6 +472,24 @@ taskFormElement.addEventListener("submit", (event) => {
 if (searchInputElement) {
   searchInputElement.addEventListener("input", () => {
     renderTaskLists(searchInputElement.value);
+  });
+}
+
+if (bulkCompleteAllButton) {
+  bulkCompleteAllButton.addEventListener("click", () => {
+    completeAllTasks();
+  });
+}
+
+if (bulkDeleteCompletedButton) {
+  bulkDeleteCompletedButton.addEventListener("click", () => {
+    deleteCompletedTasks();
+  });
+}
+
+if (bulkClearAllButton) {
+  bulkClearAllButton.addEventListener("click", () => {
+    clearAllTasks();
   });
 }
 

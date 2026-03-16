@@ -64,9 +64,37 @@
 <!-- TAREAS PENDIENTES -->
 <section class="bg-white dark:bg-gray-800 p-6 rounded-xl shadow">
 
-  <h2 class="text-xl font-semibold mb-4">
-    Tareas Pendientes (<span id="task-count">0</span>)
-  </h2>
+  <div class="flex flex-col gap-3 mb-4 sm:flex-row sm:items-center sm:justify-between">
+    <h2 class="text-xl font-semibold">
+      Tareas Pendientes (<span id="task-count">0</span>)
+    </h2>
+
+    <div class="flex flex-wrap gap-2">
+      <button
+        id="bulk-complete-all"
+        type="button"
+        class="px-3 py-2 rounded-lg text-sm font-semibold bg-emerald-600 text-white hover:bg-emerald-700 active:scale-[0.98] transition focus:outline-none focus:ring-2 focus:ring-emerald-400"
+      >
+        Completar todas
+      </button>
+
+      <button
+        id="bulk-delete-completed"
+        type="button"
+        class="px-3 py-2 rounded-lg text-sm font-semibold bg-amber-500 text-black hover:bg-amber-600 active:scale-[0.98] transition focus:outline-none focus:ring-2 focus:ring-amber-300"
+      >
+        Borrar completadas
+      </button>
+
+      <button
+        id="bulk-clear-all"
+        type="button"
+        class="px-3 py-2 rounded-lg text-sm font-semibold bg-red-600 text-white hover:bg-red-700 active:scale-[0.98] transition focus:outline-none focus:ring-2 focus:ring-red-400"
+      >
+        Vaciar todo
+      </button>
+    </div>
+  </div>
 
   <form id="task-form" class="flex flex-wrap gap-2 mb-4 items-center">
     <div class="flex-1 min-w-[180px]">
