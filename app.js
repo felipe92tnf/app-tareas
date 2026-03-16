@@ -172,6 +172,12 @@ function createTaskCard(task) {
   const actionsContainer = document.createElement("div");
   actionsContainer.className = "flex items-center gap-2 shrink-0";
 
+  let isEditing = false;
+  const editInput = document.createElement("input");
+  editInput.type = "text";
+  editInput.className =
+    "w-full p-2 rounded border dark:bg-gray-700 dark:border-gray-600";
+
   const completeButton = createActionButton(
     task.done ? "Deshacer" : "Completar",
     [
@@ -185,6 +191,56 @@ function createTaskCard(task) {
       refreshListView();
     }
   );
+
+  const editButton = createActionButton(
+    "Editar",
+    [
+      "px-3 py-2 rounded-lg text-sm font-semibold",
+      "bg-yellow-100 text-yellow-800 hover:bg-yellow-200",
+      "active:scale-[0.98] transition",
+      "focus:outline-none focus:ring-2 focus:ring-yellow-300",
+    ],
+    () => {
+      if (!isEditing) {
+        isEditing = true;
+        editInput.value = task.text;
+        title.replaceWith(editInput);
+        editInput.focus();
+        editButton.textContent = "Guardar";
+        cancelEditButton.classList.remove("hidden");
+        return;
+      }
+
+      const updatedText = editInput.value.trim();
+      if (!updatedText) return;
+
+      task.text = updatedText;
+      title.textContent = updatedText;
+      editInput.replaceWith(title);
+      isEditing = false;
+      editButton.textContent = "Editar";
+      cancelEditButton.classList.add("hidden");
+      refreshListView();
+    }
+  );
+
+  const cancelEditButton = createActionButton(
+    "Cancelar",
+    [
+      "px-3 py-2 rounded-lg text-sm font-semibold",
+      "bg-gray-100 text-gray-800 hover:bg-gray-200",
+      "active:scale-[0.98] transition",
+      "focus:outline-none focus:ring-2 focus:ring-gray-400",
+    ],
+    () => {
+      if (!isEditing) return;
+      editInput.replaceWith(title);
+      isEditing = false;
+      editButton.textContent = "Editar";
+      cancelEditButton.classList.add("hidden");
+    }
+  );
+  cancelEditButton.classList.add("hidden");
 
   const deleteButton = createActionButton(
     "✕",
@@ -202,6 +258,8 @@ function createTaskCard(task) {
   deleteButton.setAttribute("aria-label", "Eliminar tarea");
 
   actionsContainer.appendChild(completeButton);
+  actionsContainer.appendChild(editButton);
+  actionsContainer.appendChild(cancelEditButton);
   actionsContainer.appendChild(deleteButton);
 
   taskEl.appendChild(taskInfoContainer);
