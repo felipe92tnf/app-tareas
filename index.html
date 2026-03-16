@@ -68,8 +68,8 @@
     Tareas Pendientes (<span id="task-count">0</span>)
   </h2>
 
-  <form id="task-form" class="flex gap-2 mb-4">
-    <div class="flex-1">
+  <form id="task-form" class="flex flex-wrap gap-2 mb-4 items-center">
+    <div class="flex-1 min-w-[180px]">
       <label for="task-input" class="sr-only">Nueva tarea</label>
       <input
         type="text"
@@ -78,6 +78,18 @@
         required
         class="w-full p-2 rounded border dark:bg-gray-700"
       >
+    </div>
+
+    <div>
+      <label for="task-priority" class="sr-only">Prioridad</label>
+      <select
+        id="task-priority"
+        class="p-2 rounded border bg-white dark:bg-gray-700 dark:border-gray-600 text-sm"
+      >
+        <option value="low">Baja</option>
+        <option value="medium" selected>Media</option>
+        <option value="high">Alta</option>
+      </select>
     </div>
 
     <button

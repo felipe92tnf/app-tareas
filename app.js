@@ -3,12 +3,14 @@
  * @property {string} id
  * @property {string} text
  * @property {boolean} done
+ * @property {"low" | "medium" | "high"} priority
  */
 
 // ---------- Selectores de DOM ----------
 
 const taskFormElement = document.getElementById("task-form");
 const taskInputElement = document.getElementById("task-input");
+const taskPriorityElement = document.getElementById("task-priority");
 
 const pendingTasksContainer = document.getElementById("task-list");
 const completedTasksContainer = document.getElementById("completed-list");
@@ -52,7 +54,7 @@ function safeJsonParse(raw) {
 
 /**
  * Normaliza un item procedente de localStorage al formato de tarea actual.
- * @param {string | { id?: string; text?: string; done?: boolean }} rawItem
+ * @param {string | { id?: string; text?: string; done?: boolean; priority?: string }} rawItem
  * @returns {Task}
  */
 function normalizeTask(rawItem) {
@@ -61,15 +63,22 @@ function normalizeTask(rawItem) {
       id: generateTaskId(),
       text: rawItem,
       done: false,
+      priority: "medium",
     };
   }
 
   const text = typeof rawItem?.text === "string" ? rawItem.text.trim() : "";
+  const priorityRaw = typeof rawItem?.priority === "string" ? rawItem.priority : "medium";
+  const normalizedPriority =
+    priorityRaw === "high" || priorityRaw === "low" || priorityRaw === "medium"
+      ? priorityRaw
+      : "medium";
 
   return {
     id: rawItem?.id || generateTaskId(),
     text,
     done: Boolean(rawItem?.done),
+    priority: normalizedPriority,
   };
 }
 
@@ -162,12 +171,36 @@ function createTaskCard(task) {
   title.className = "font-semibold text-gray-900 dark:text-gray-100 truncate";
   title.textContent = task.text;
 
-  const category = document.createElement("p");
-  category.className = "text-sm text-gray-500 dark:text-gray-300";
-  category.textContent = "General";
+  const priorityBadge = document.createElement("span");
+  priorityBadge.className =
+    "inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold border shadow-sm";
+
+  const priority = task.priority || "medium";
+  if (priority === "high") {
+    priorityBadge.textContent = "Alta";
+    priorityBadge.classList.add(
+      "bg-red-50",
+      "text-red-700",
+      "border-red-200"
+    );
+  } else if (priority === "low") {
+    priorityBadge.textContent = "Baja";
+    priorityBadge.classList.add(
+      "bg-emerald-50",
+      "text-emerald-700",
+      "border-emerald-200"
+    );
+  } else {
+    priorityBadge.textContent = "Media";
+    priorityBadge.classList.add(
+      "bg-yellow-50",
+      "text-yellow-700",
+      "border-yellow-200"
+    );
+  }
 
   taskInfoContainer.appendChild(title);
-  taskInfoContainer.appendChild(category);
+  taskInfoContainer.appendChild(priorityBadge);
 
   const actionsContainer = document.createElement("div");
   actionsContainer.className = "flex items-center gap-2 shrink-0";
@@ -283,9 +316,18 @@ function renderTaskLists(filterText = "") {
 
   const query = (filterText || "").toLowerCase();
 
-  const filteredTasks = tasks.filter((task) =>
-    (task.text || "").toLowerCase().includes(query)
-  );
+  const priorityOrder = { high: 0, medium: 1, low: 2 };
+
+  const filteredTasks = tasks
+    .filter((task) =>
+      (task.text || "").toLowerCase().includes(query)
+    )
+    .sort((a, b) => {
+      const pa = priorityOrder[a.priority || "medium"];
+      const pb = priorityOrder[b.priority || "medium"];
+      if (pa !== pb) return pa - pb;
+      return a.text.localeCompare(b.text);
+    });
 
   const pendingTasks = tasks.filter((task) => !task.done);
 
@@ -310,10 +352,17 @@ taskFormElement.addEventListener("submit", (event) => {
   const newTaskText = taskInputElement.value.trim();
   if (!newTaskText) return;
 
+  const priorityValue = taskPriorityElement && taskPriorityElement.value
+    ? taskPriorityElement.value
+    : "medium";
+
   tasks.push({
     id: generateTaskId(),
     text: newTaskText,
     done: false,
+    priority: priorityValue === "high" || priorityValue === "low" || priorityValue === "medium"
+      ? priorityValue
+      : "medium",
   });
 
   refreshListView();
