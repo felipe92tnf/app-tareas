@@ -5,12 +5,14 @@
  * @property {boolean} done
  * @property {"low" | "medium" | "high"} priority
  * @property {string | null} dueDate
+ * @property {string} category
  */
 
 // ---------- Selectores de DOM ----------
 
 const taskFormElement = document.getElementById("task-form");
 const taskInputElement = document.getElementById("task-input");
+const taskCategoryElement = document.getElementById("task-category");
 const taskPriorityElement = document.getElementById("task-priority");
 const taskDueDateElement = document.getElementById("task-due-date");
 const bulkCompleteAllButton = document.getElementById("bulk-complete-all");
@@ -22,13 +24,20 @@ const completedTasksContainer = document.getElementById("completed-list");
 
 const searchInputElement = document.getElementById("task-search");
 const taskCountElement = document.getElementById("task-count");
+const categoryInputElement = document.getElementById("category-input");
+const categoryAddButton = document.getElementById("category-add");
+const categoryListElement = document.getElementById("category-list");
 
 // ---------- Estado y constantes ----------
 
 const TASKS_STORAGE_KEY = "tareas";
+const CATEGORIES_STORAGE_KEY = "categorias";
 
 /** @type {Task[]} */
 let tasks = [];
+
+/** @type {string[]} */
+let categories = [];
 
 // ---------- Utilidades ----------
 
@@ -59,7 +68,7 @@ function safeJsonParse(raw) {
 
 /**
  * Normaliza un item procedente de localStorage al formato de tarea actual.
- * @param {string | { id?: string; text?: string; done?: boolean; priority?: string; dueDate?: string | null }} rawItem
+ * @param {string | { id?: string; text?: string; done?: boolean; priority?: string; dueDate?: string | null; category?: string }} rawItem
  * @returns {Task}
  */
 function normalizeTask(rawItem) {
@@ -70,6 +79,7 @@ function normalizeTask(rawItem) {
       done: false,
       priority: "medium",
       dueDate: null,
+      category: "General",
     };
   }
 
@@ -83,6 +93,8 @@ function normalizeTask(rawItem) {
     typeof rawItem?.dueDate === "string" && rawItem.dueDate.trim()
       ? rawItem.dueDate
       : null;
+  const categoryRaw = typeof rawItem?.category === "string" ? rawItem.category.trim() : "";
+  const normalizedCategory = categoryRaw || "General";
 
   return {
     id: rawItem?.id || generateTaskId(),
@@ -90,7 +102,75 @@ function normalizeTask(rawItem) {
     done: Boolean(rawItem?.done),
     priority: normalizedPriority,
     dueDate: dueDateRaw,
+    category: normalizedCategory,
   };
+}
+
+function normalizeCategoryName(name) {
+  return String(name || "").trim().replace(/\s+/g, " ");
+}
+
+function saveCategoriesToStorage(categoriesSnapshot = categories) {
+  const dataToPersist = Array.isArray(categoriesSnapshot) ? categoriesSnapshot : [];
+  try {
+    localStorage.setItem(CATEGORIES_STORAGE_KEY, JSON.stringify(dataToPersist));
+  } catch (error) {
+    console.error("[TaskFlow] Error al guardar categorías:", error);
+  }
+}
+
+function loadCategoriesFromStorage() {
+  const parsed = safeJsonParse(localStorage.getItem(CATEGORIES_STORAGE_KEY));
+  const rawList = Array.isArray(parsed) ? parsed : [];
+  const defaults = ["General", "Trabajo", "Estudio", "Personal"];
+  const normalized = rawList.map(normalizeCategoryName).filter(Boolean);
+  categories = Array.from(new Set([...defaults, ...normalized]));
+  saveCategoriesToStorage();
+}
+
+function renderCategoryList() {
+  if (!categoryListElement) return;
+  categoryListElement.innerHTML = "";
+
+  categories.forEach((cat) => {
+    const li = document.createElement("li");
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className =
+      "w-full flex items-center justify-between px-3 py-2 rounded-xl border text-sm font-semibold transition bg-white text-gray-800 border-gray-200 hover:bg-gray-50 dark:bg-gray-800 dark:text-gray-100 dark:border-gray-700 dark:hover:bg-gray-700/60";
+    button.textContent = cat;
+    button.addEventListener("click", () => {
+      if (taskCategoryElement) taskCategoryElement.value = cat;
+    });
+    li.appendChild(button);
+    categoryListElement.appendChild(li);
+  });
+}
+
+function renderCategorySelect() {
+  if (!taskCategoryElement) return;
+  taskCategoryElement.innerHTML = "";
+
+  categories.forEach((cat) => {
+    const option = document.createElement("option");
+    option.value = cat;
+    option.textContent = cat;
+    taskCategoryElement.appendChild(option);
+  });
+
+  if (!taskCategoryElement.value) taskCategoryElement.value = "General";
+}
+
+function getPriorityBadgeClasses(priority) {
+  if (priority === "high") return ["bg-red-500", "text-white", "border-red-700"];
+  if (priority === "low") return ["bg-green-500", "text-white", "border-green-700"];
+  return ["bg-yellow-400", "text-black", "border-yellow-600"];
+}
+
+function getPriorityLabel(priority) {
+  if (priority === "high") return "Alta";
+  if (priority === "low") return "Baja";
+  return "Media";
 }
 
 function toLocalMidnight(date) {
@@ -254,19 +334,9 @@ function createTaskCard(task) {
   const priorityBadge = document.createElement("span");
   priorityBadge.className =
     "inline-flex items-center px-3 py-1 rounded-full text-xs font-bold border";
-
-const priority = task.priority || "medium";
-
-if (priority === "high") {
-  priorityBadge.textContent = "Alta";
-  priorityBadge.classList.add("bg-red-500", "text-white", "border-red-700");
-} else if (priority === "low") {
-  priorityBadge.textContent = "Baja";
-  priorityBadge.classList.add("bg-green-500", "text-white", "border-green-700");
-} else {
-  priorityBadge.textContent = "Media";
-  priorityBadge.classList.add("bg-yellow-400", "text-black", "border-yellow-600");
-}
+  const priority = task.priority || "medium";
+  priorityBadge.textContent = getPriorityLabel(priority);
+  priorityBadge.classList.add(...getPriorityBadgeClasses(priority));
 
   const dueLabel = getDueLabel(task.dueDate);
   const dueBadge = document.createElement("span");
@@ -444,6 +514,11 @@ taskFormElement.addEventListener("submit", (event) => {
   const newTaskText = taskInputElement.value.trim();
   if (!newTaskText) return;
 
+  const categoryValue =
+    taskCategoryElement && taskCategoryElement.value
+      ? taskCategoryElement.value
+      : "General";
+
   const priorityValue = taskPriorityElement && taskPriorityElement.value
     ? taskPriorityElement.value
     : "medium";
@@ -460,12 +535,14 @@ taskFormElement.addEventListener("submit", (event) => {
       ? priorityValue
       : "medium",
     dueDate: dueDateValue,
+    category: categoryValue,
   });
 
   refreshListView();
 
   taskInputElement.value = "";
   if (taskDueDateElement) taskDueDateElement.value = "";
+  if (taskCategoryElement) taskCategoryElement.value = "General";
   taskInputElement.focus();
 });
 
@@ -493,7 +570,34 @@ if (bulkClearAllButton) {
   });
 }
 
+if (categoryAddButton && categoryInputElement) {
+  const addCategory = () => {
+    const name = normalizeCategoryName(categoryInputElement.value);
+    if (!name) return;
+    if (categories.includes(name)) {
+      categoryInputElement.value = "";
+      return;
+    }
+    categories = [...categories, name];
+    saveCategoriesToStorage();
+    renderCategoryList();
+    renderCategorySelect();
+    categoryInputElement.value = "";
+  };
+
+  categoryAddButton.addEventListener("click", addCategory);
+  categoryInputElement.addEventListener("keydown", (event) => {
+    if (event.key === "Enter") {
+      event.preventDefault();
+      addCategory();
+    }
+  });
+}
+
 // ---------- Init ----------
 
+loadCategoriesFromStorage();
+renderCategoryList();
+renderCategorySelect();
 loadTasksFromStorage();
 renderTaskLists();
