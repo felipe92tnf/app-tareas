@@ -8,13 +8,16 @@
  * @property {string} category
  */
 
-// ---------- Selectores de DOM ----------
+// ---------- Config API ----------
+const API_URL = "http://localhost:3000/api/v1/tasks";
 
+// ---------- Selectores de DOM ----------
 const taskFormElement = document.getElementById("task-form");
 const taskInputElement = document.getElementById("task-input");
 const taskCategoryElement = document.getElementById("task-category");
 const taskPriorityElement = document.getElementById("task-priority");
 const taskDueDateElement = document.getElementById("task-due-date");
+
 const bulkCompleteAllButton = document.getElementById("bulk-complete-all");
 const bulkDeleteCompletedButton = document.getElementById("bulk-delete-completed");
 const bulkClearAllButton = document.getElementById("bulk-clear-all");
@@ -24,141 +27,130 @@ const completedTasksContainer = document.getElementById("completed-list");
 
 const searchInputElement = document.getElementById("task-search");
 const taskCountElement = document.getElementById("task-count");
+
 const categoryInputElement = document.getElementById("category-input");
 const categoryAddButton = document.getElementById("category-add");
 const categoryListElement = document.getElementById("category-list");
 
-// ---------- Estado y constantes ----------
-
-const TASKS_STORAGE_KEY = "tareas";
-const CATEGORIES_STORAGE_KEY = "categorias";
-
+// ---------- Estado ----------
 /** @type {Task[]} */
 let tasks = [];
 
 /** @type {string[]} */
-let categories = [];
+let categories = ["General", "Trabajo", "Estudio", "Personal"];
+
+// ---------- API ----------
+async function parseApiResponse(response) {
+  if (response.status === 204) return null;
+
+  const data = await response.json().catch(() => null);
+
+  if (!response.ok) {
+    const message =
+      data && typeof data.error === "string"
+        ? data.error
+        : "Error en la comunicación con el servidor";
+    throw new Error(message);
+  }
+
+  return data;
+}
+
+/**
+ * Obtiene todas las tareas del backend.
+ * @returns {Promise<Task[]>}
+ */
+async function fetchTasks() {
+  const response = await fetch(API_URL);
+  const data = await parseApiResponse(response);
+  return Array.isArray(data) ? data : [];
+}
+
+/**
+ * Crea una tarea en el backend.
+ * @param {{ text: string; priority: "low" | "medium" | "high"; dueDate: string | null; category: string }} taskData
+ * @returns {Promise<Task>}
+ */
+async function createTaskRequest(taskData) {
+  const response = await fetch(API_URL, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(taskData),
+  });
+
+  return await parseApiResponse(response);
+}
+
+/**
+ * Actualiza parcialmente una tarea.
+ * @param {string} id
+ * @param {Partial<Task>} updates
+ * @returns {Promise<Task>}
+ */
+async function updateTaskRequest(id, updates) {
+  const response = await fetch(`${API_URL}/${id}`, {
+    method: "PATCH",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(updates),
+  });
+
+  return await parseApiResponse(response);
+}
+
+/**
+ * Elimina una tarea por id.
+ * @param {string} id
+ * @returns {Promise<void>}
+ */
+async function deleteTaskRequest(id) {
+  const response = await fetch(`${API_URL}/${id}`, {
+    method: "DELETE",
+  });
+
+  await parseApiResponse(response);
+}
+
+/**
+ * Elimina todas las tareas completadas.
+ * @returns {Promise<void>}
+ */
+async function deleteCompletedTasksRequest() {
+  const response = await fetch(`${API_URL}/completed`, {
+    method: "DELETE",
+  });
+
+  await parseApiResponse(response);
+}
+
+/**
+ * Elimina todas las tareas.
+ * @returns {Promise<void>}
+ */
+async function clearAllTasksRequest() {
+  const response = await fetch(API_URL, {
+    method: "DELETE",
+  });
+
+  await parseApiResponse(response);
+}
 
 // ---------- Utilidades ----------
-
-/**
- * Genera un identificador único para una tarea.
- * @returns {string}
- */
-function generateTaskId() {
-  if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
-    return crypto.randomUUID();
-  }
-  return String(Date.now()) + Math.random();
-}
-
-/**
- * Intenta parsear JSON de forma segura.
- * @param {string | null} raw
- * @returns {unknown}
- */
-function safeJsonParse(raw) {
-  if (!raw) return null;
-  try {
-    return JSON.parse(raw);
-  } catch {
-    return null;
-  }
-}
-
-/**
- * Normaliza un item procedente de localStorage al formato de tarea actual.
- * @param {string | { id?: string; text?: string; done?: boolean; priority?: string; dueDate?: string | null; category?: string }} rawItem
- * @returns {Task}
- */
-function normalizeTask(rawItem) {
-  if (typeof rawItem === "string") {
-    return {
-      id: generateTaskId(),
-      text: rawItem,
-      done: false,
-      priority: "medium",
-      dueDate: null,
-      category: "General",
-    };
-  }
-
-  const text = typeof rawItem?.text === "string" ? rawItem.text.trim() : "";
-  const priorityRaw = typeof rawItem?.priority === "string" ? rawItem.priority : "medium";
-  const normalizedPriority =
-    priorityRaw === "high" || priorityRaw === "low" || priorityRaw === "medium"
-      ? priorityRaw
-      : "medium";
-  const dueDateRaw =
-    typeof rawItem?.dueDate === "string" && rawItem.dueDate.trim()
-      ? rawItem.dueDate
-      : null;
-  const categoryRaw = typeof rawItem?.category === "string" ? rawItem.category.trim() : "";
-  const normalizedCategory = categoryRaw || "General";
-
-  return {
-    id: rawItem?.id || generateTaskId(),
-    text,
-    done: Boolean(rawItem?.done),
-    priority: normalizedPriority,
-    dueDate: dueDateRaw,
-    category: normalizedCategory,
-  };
-}
-
 function normalizeCategoryName(name) {
   return String(name || "").trim().replace(/\s+/g, " ");
 }
 
-function saveCategoriesToStorage(categoriesSnapshot = categories) {
-  const dataToPersist = Array.isArray(categoriesSnapshot) ? categoriesSnapshot : [];
-  try {
-    localStorage.setItem(CATEGORIES_STORAGE_KEY, JSON.stringify(dataToPersist));
-  } catch (error) {
-    console.error("[TaskFlow] Error al guardar categorías:", error);
-  }
-}
+function mergeCategoriesFromTasks(tasksList) {
+  const taskCategories = tasksList
+    .map((task) => normalizeCategoryName(task.category || ""))
+    .filter(Boolean);
 
-function loadCategoriesFromStorage() {
-  const parsed = safeJsonParse(localStorage.getItem(CATEGORIES_STORAGE_KEY));
-  const rawList = Array.isArray(parsed) ? parsed : [];
-  const defaults = ["General", "Trabajo", "Estudio", "Personal"];
-  const normalized = rawList.map(normalizeCategoryName).filter(Boolean);
-  categories = Array.from(new Set([...defaults, ...normalized]));
-  saveCategoriesToStorage();
-}
-
-function renderCategoryList() {
-  if (!categoryListElement) return;
-  categoryListElement.innerHTML = "";
-
-  categories.forEach((cat) => {
-    const li = document.createElement("li");
-    const button = document.createElement("button");
-    button.type = "button";
-    button.className =
-      "w-full flex items-center justify-between px-3 py-2 rounded-xl border text-sm font-semibold transition bg-white text-gray-800 border-gray-200 hover:bg-gray-50 dark:bg-gray-800 dark:text-gray-100 dark:border-gray-700 dark:hover:bg-gray-700/60";
-    button.textContent = cat;
-    button.addEventListener("click", () => {
-      if (taskCategoryElement) taskCategoryElement.value = cat;
-    });
-    li.appendChild(button);
-    categoryListElement.appendChild(li);
-  });
-}
-
-function renderCategorySelect() {
-  if (!taskCategoryElement) return;
-  taskCategoryElement.innerHTML = "";
-
-  categories.forEach((cat) => {
-    const option = document.createElement("option");
-    option.value = cat;
-    option.textContent = cat;
-    taskCategoryElement.appendChild(option);
-  });
-
-  if (!taskCategoryElement.value) taskCategoryElement.value = "General";
+  categories = Array.from(
+    new Set(["General", "Trabajo", "Estudio", "Personal", ...taskCategories, ...categories])
+  );
 }
 
 function getPriorityBadgeClasses(priority) {
@@ -213,45 +205,19 @@ function isTaskOverdue(task) {
 }
 
 /**
- * Devuelve solo las tareas marcadas como completadas.
- *
+ * Devuelve solo las tareas completadas.
  * @param {Task[]} tasksList
- *   Lista de tareas a filtrar.
  * @returns {Task[]}
- *   Subconjunto de tareas cuyo campo `done` es true.
  */
 function getCompletedTasks(tasksList) {
-  return tasksList.filter(task => task.done === true);
-}
-
-function completeAllTasks() {
-  if (tasks.length === 0) return;
-  tasks = tasks.map(task => ({ ...task, done: true }));
-  refreshListView();
-}
-
-function deleteCompletedTasks() {
-  const completedCount = getCompletedTasks(tasks).length;
-  if (completedCount === 0) return;
-  const ok = confirm(`¿Borrar ${completedCount} tarea(s) completada(s)?`);
-  if (!ok) return;
-  tasks = tasks.filter(task => task.done !== true);
-  refreshListView();
-}
-
-function clearAllTasks() {
-  if (tasks.length === 0) return;
-  const ok = confirm("¿Vaciar todas las tareas? Esta acción no se puede deshacer.");
-  if (!ok) return;
-  tasks = [];
-  refreshListView();
+  return tasksList.filter((task) => task.done === true);
 }
 
 /**
  * Crea un botón de acción reutilizable.
  * @param {string} label
  * @param {string[]} classNames
- * @param {() => void} onClick
+ * @param {() => void | Promise<void>} onClick
  * @returns {HTMLButtonElement}
  */
 function createActionButton(label, classNames, onClick) {
@@ -259,51 +225,70 @@ function createActionButton(label, classNames, onClick) {
   button.type = "button";
   button.textContent = label;
   button.className = classNames.join(" ");
-  button.addEventListener("click", onClick);
+  button.addEventListener("click", async () => {
+    try {
+      button.disabled = true;
+      await onClick();
+    } catch (error) {
+      alert(error.message || "Ha ocurrido un error");
+      console.error(error);
+    } finally {
+      button.disabled = false;
+    }
+  });
   return button;
 }
 
-/**
- * Guarda la lista de tareas en localStorage.
- *
- * @param {Task[] | null | undefined} tasksSnapshot
- *   Instantánea de tareas a persistir. Por defecto usa el estado global `tasks`.
- */
-function saveTasksToStorage(tasksSnapshot = tasks) {
-  const dataToPersist = Array.isArray(tasksSnapshot) ? tasksSnapshot : [];
+// ---------- Categorías ----------
+function renderCategoryList() {
+  if (!categoryListElement) return;
 
-  try {
-    const serializedTasks = JSON.stringify(dataToPersist);
-    localStorage.setItem(TASKS_STORAGE_KEY, serializedTasks);
-  } catch (error) {
-    // Útil en desarrollo para detectar problemas de cuota o datos no serializables.
-    console.error("[TaskFlow] Error al guardar tareas en localStorage:", error);
-  }
+  categoryListElement.innerHTML = "";
+
+  categories.forEach((category) => {
+    const li = document.createElement("li");
+
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className =
+      "w-full flex items-center justify-between px-3 py-2 rounded-xl border text-sm font-semibold transition bg-white text-gray-800 border-gray-200 hover:bg-gray-50 dark:bg-gray-800 dark:text-gray-100 dark:border-gray-700 dark:hover:bg-gray-700/60";
+    button.textContent = category;
+
+    button.addEventListener("click", () => {
+      if (taskCategoryElement) taskCategoryElement.value = category;
+    });
+
+    li.appendChild(button);
+    categoryListElement.appendChild(li);
+  });
 }
 
-/**
- * Carga las tareas desde localStorage y las normaliza al formato actual.
- */
-function loadTasksFromStorage() {
-  const parsed = safeJsonParse(localStorage.getItem(TASKS_STORAGE_KEY));
-  const rawList = Array.isArray(parsed) ? parsed : [];
+function renderCategorySelect() {
+  if (!taskCategoryElement) return;
 
-  tasks = rawList
-    .map(normalizeTask)
-    .filter((task) => task.text !== "");
+  const currentValue = taskCategoryElement.value;
+  taskCategoryElement.innerHTML = "";
 
-  // Guardar ya normalizado para no volver a fallar
-  saveTasksToStorage();
+  categories.forEach((category) => {
+    const option = document.createElement("option");
+    option.value = category;
+    option.textContent = category;
+    taskCategoryElement.appendChild(option);
+  });
+
+  taskCategoryElement.value = categories.includes(currentValue) ? currentValue : "General";
 }
 
 // ---------- UI ----------
-
 /**
- * Refresca el listado en pantalla manteniendo el filtro actual (si lo hay).
+ * Vuelve a cargar tareas desde backend y renderiza la vista.
  */
-function refreshListView() {
+async function refreshListView() {
   const currentQuery = searchInputElement ? searchInputElement.value : "";
-  saveTasksToStorage();
+  tasks = await fetchTasks();
+  mergeCategoriesFromTasks(tasks);
+  renderCategoryList();
+  renderCategorySelect();
   renderTaskLists(currentQuery);
 }
 
@@ -334,9 +319,15 @@ function createTaskCard(task) {
   const priorityBadge = document.createElement("span");
   priorityBadge.className =
     "inline-flex items-center px-3 py-1 rounded-full text-xs font-bold border";
+
   const priority = task.priority || "medium";
   priorityBadge.textContent = getPriorityLabel(priority);
   priorityBadge.classList.add(...getPriorityBadgeClasses(priority));
+
+  const categoryBadge = document.createElement("span");
+  categoryBadge.className =
+    "inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold border bg-gray-100 text-gray-800 border-gray-300";
+  categoryBadge.textContent = task.category || "General";
 
   const dueLabel = getDueLabel(task.dueDate);
   const dueBadge = document.createElement("span");
@@ -345,6 +336,7 @@ function createTaskCard(task) {
 
   if (dueLabel) {
     dueBadge.textContent = dueLabel;
+
     if (isTaskOverdue(task)) {
       dueBadge.classList.add("bg-red-500", "text-white", "border-red-700");
     } else if (dueLabel === "Vence hoy") {
@@ -359,6 +351,7 @@ function createTaskCard(task) {
   }
 
   metaRow.appendChild(priorityBadge);
+  metaRow.appendChild(categoryBadge);
   metaRow.appendChild(dueBadge);
 
   taskInfoContainer.appendChild(title);
@@ -368,6 +361,7 @@ function createTaskCard(task) {
   actionsContainer.className = "flex items-center gap-2 shrink-0";
 
   let isEditing = false;
+
   const editInput = document.createElement("input");
   editInput.type = "text";
   editInput.className =
@@ -381,9 +375,9 @@ function createTaskCard(task) {
       "active:scale-[0.98] transition",
       "focus:outline-none focus:ring-2 focus:ring-blue-400",
     ],
-    () => {
-      task.done = !task.done;
-      refreshListView();
+    async () => {
+      await updateTaskRequest(task.id, { done: !task.done });
+      await refreshListView();
     }
   );
 
@@ -395,7 +389,7 @@ function createTaskCard(task) {
       "active:scale-[0.98] transition",
       "focus:outline-none focus:ring-2 focus:ring-yellow-300",
     ],
-    () => {
+    async () => {
       if (!isEditing) {
         isEditing = true;
         editInput.value = task.text;
@@ -407,15 +401,16 @@ function createTaskCard(task) {
       }
 
       const updatedText = editInput.value.trim();
-      if (!updatedText) return;
+      if (!updatedText) {
+        alert("El texto de la tarea no puede estar vacío");
+        return;
+      }
 
-      task.text = updatedText;
-      title.textContent = updatedText;
-      editInput.replaceWith(title);
+      await updateTaskRequest(task.id, { text: updatedText });
       isEditing = false;
       editButton.textContent = "Editar";
       cancelEditButton.classList.add("hidden");
-      refreshListView();
+      await refreshListView();
     }
   );
 
@@ -427,7 +422,7 @@ function createTaskCard(task) {
       "active:scale-[0.98] transition",
       "focus:outline-none focus:ring-2 focus:ring-gray-400",
     ],
-    () => {
+    async () => {
       if (!isEditing) return;
       editInput.replaceWith(title);
       isEditing = false;
@@ -445,9 +440,9 @@ function createTaskCard(task) {
       "active:scale-[0.98] transition",
       "focus:outline-none focus:ring-2 focus:ring-red-400",
     ],
-    () => {
-      tasks = tasks.filter((t) => t.id !== task.id);
-      refreshListView();
+    async () => {
+      await deleteTaskRequest(task.id);
+      await refreshListView();
     }
   );
   deleteButton.setAttribute("aria-label", "Eliminar tarea");
@@ -469,7 +464,7 @@ function createTaskCard(task) {
 }
 
 /**
- * Renderiza las listas de tareas pendientes y completadas en la interfaz.
+ * Renderiza las listas de tareas pendientes y completadas.
  * @param {string} [filterText=""]
  */
 function renderTaskLists(filterText = "") {
@@ -477,17 +472,15 @@ function renderTaskLists(filterText = "") {
   completedTasksContainer.innerHTML = "";
 
   const query = (filterText || "").toLowerCase();
-
   const priorityOrder = { high: 0, medium: 1, low: 2 };
 
   const filteredTasks = tasks
-    .filter((task) =>
-      (task.text || "").toLowerCase().includes(query)
-    )
+    .filter((task) => (task.text || "").toLowerCase().includes(query))
     .sort((a, b) => {
-      const pa = priorityOrder[a.priority || "medium"];
-      const pb = priorityOrder[b.priority || "medium"];
-      if (pa !== pb) return pa - pb;
+      const priorityA = priorityOrder[a.priority || "medium"];
+      const priorityB = priorityOrder[b.priority || "medium"];
+
+      if (priorityA !== priorityB) return priorityA - priorityB;
       return a.text.localeCompare(b.text);
     });
 
@@ -502,49 +495,91 @@ function renderTaskLists(filterText = "") {
     const targetList = task.done
       ? completedTasksContainer
       : pendingTasksContainer;
+
     targetList.appendChild(card);
   });
 }
 
+// ---------- Acciones masivas ----------
+async function completeAllTasks() {
+  if (tasks.length === 0) return;
+
+  for (const task of tasks) {
+    if (!task.done) {
+      await updateTaskRequest(task.id, { done: true });
+    }
+  }
+
+  await refreshListView();
+}
+
+async function deleteCompletedTasks() {
+  const completedCount = getCompletedTasks(tasks).length;
+  if (completedCount === 0) return;
+
+  const ok = confirm(`¿Borrar ${completedCount} tarea(s) completada(s)?`);
+  if (!ok) return;
+
+  await deleteCompletedTasksRequest();
+  await refreshListView();
+}
+
+async function clearAllTasks() {
+  if (tasks.length === 0) return;
+
+  const ok = confirm("¿Vaciar todas las tareas? Esta acción no se puede deshacer.");
+  if (!ok) return;
+
+  await clearAllTasksRequest();
+  await refreshListView();
+}
+
 // ---------- Eventos ----------
+if (taskFormElement) {
+  taskFormElement.addEventListener("submit", async (event) => {
+    event.preventDefault();
 
-taskFormElement.addEventListener("submit", (event) => {
-  event.preventDefault();
+    try {
+      const newTaskText = taskInputElement.value.trim();
+      if (!newTaskText) {
+        alert("La tarea no puede estar vacía");
+        return;
+      }
 
-  const newTaskText = taskInputElement.value.trim();
-  if (!newTaskText) return;
+      const categoryValue =
+        taskCategoryElement && taskCategoryElement.value
+          ? taskCategoryElement.value
+          : "General";
 
-  const categoryValue =
-    taskCategoryElement && taskCategoryElement.value
-      ? taskCategoryElement.value
-      : "General";
+      const priorityValue =
+        taskPriorityElement && taskPriorityElement.value
+          ? taskPriorityElement.value
+          : "medium";
 
-  const priorityValue = taskPriorityElement && taskPriorityElement.value
-    ? taskPriorityElement.value
-    : "medium";
-  const dueDateValue =
-    taskDueDateElement && taskDueDateElement.value
-      ? taskDueDateElement.value
-      : null;
+      const dueDateValue =
+        taskDueDateElement && taskDueDateElement.value
+          ? taskDueDateElement.value
+          : null;
 
-  tasks.push({
-    id: generateTaskId(),
-    text: newTaskText,
-    done: false,
-    priority: priorityValue === "high" || priorityValue === "low" || priorityValue === "medium"
-      ? priorityValue
-      : "medium",
-    dueDate: dueDateValue,
-    category: categoryValue,
+      await createTaskRequest({
+        text: newTaskText,
+        category: categoryValue,
+        priority: priorityValue,
+        dueDate: dueDateValue,
+      });
+
+      await refreshListView();
+
+      taskInputElement.value = "";
+      if (taskDueDateElement) taskDueDateElement.value = "";
+      if (taskCategoryElement) taskCategoryElement.value = "General";
+      taskInputElement.focus();
+    } catch (error) {
+      alert(error.message || "No se pudo crear la tarea");
+      console.error(error);
+    }
   });
-
-  refreshListView();
-
-  taskInputElement.value = "";
-  if (taskDueDateElement) taskDueDateElement.value = "";
-  if (taskCategoryElement) taskCategoryElement.value = "General";
-  taskInputElement.focus();
-});
+}
 
 if (searchInputElement) {
   searchInputElement.addEventListener("input", () => {
@@ -553,20 +588,35 @@ if (searchInputElement) {
 }
 
 if (bulkCompleteAllButton) {
-  bulkCompleteAllButton.addEventListener("click", () => {
-    completeAllTasks();
+  bulkCompleteAllButton.addEventListener("click", async () => {
+    try {
+      await completeAllTasks();
+    } catch (error) {
+      alert(error.message || "No se pudieron completar las tareas");
+      console.error(error);
+    }
   });
 }
 
 if (bulkDeleteCompletedButton) {
-  bulkDeleteCompletedButton.addEventListener("click", () => {
-    deleteCompletedTasks();
+  bulkDeleteCompletedButton.addEventListener("click", async () => {
+    try {
+      await deleteCompletedTasks();
+    } catch (error) {
+      alert(error.message || "No se pudieron borrar las completadas");
+      console.error(error);
+    }
   });
 }
 
 if (bulkClearAllButton) {
-  bulkClearAllButton.addEventListener("click", () => {
-    clearAllTasks();
+  bulkClearAllButton.addEventListener("click", async () => {
+    try {
+      await clearAllTasks();
+    } catch (error) {
+      alert(error.message || "No se pudieron borrar las tareas");
+      console.error(error);
+    }
   });
 }
 
@@ -578,14 +628,15 @@ if (categoryAddButton && categoryInputElement) {
       categoryInputElement.value = "";
       return;
     }
+
     categories = [...categories, name];
-    saveCategoriesToStorage();
     renderCategoryList();
     renderCategorySelect();
     categoryInputElement.value = "";
   };
 
   categoryAddButton.addEventListener("click", addCategory);
+
   categoryInputElement.addEventListener("keydown", (event) => {
     if (event.key === "Enter") {
       event.preventDefault();
@@ -595,9 +646,17 @@ if (categoryAddButton && categoryInputElement) {
 }
 
 // ---------- Init ----------
+async function initApp() {
+  try {
+    tasks = await fetchTasks();
+    mergeCategoriesFromTasks(tasks);
+    renderCategoryList();
+    renderCategorySelect();
+    renderTaskLists();
+  } catch (error) {
+    alert("No se pudieron cargar las tareas desde el servidor");
+    console.error(error);
+  }
+}
 
-loadCategoriesFromStorage();
-renderCategoryList();
-renderCategorySelect();
-loadTasksFromStorage();
-renderTaskLists();
+initApp();
